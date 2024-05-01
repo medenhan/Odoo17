@@ -87,7 +87,7 @@ Resources:
         Fn::Base64:
           !Sub |
             #!/bin/bash
-            https://github.com/medenhan/Odoo17.git
+            https://raw.githubusercontent.com/medenhan/Odoo17/main/user-data.sh
 
   # RDS Instance
   OdooDatabase:
