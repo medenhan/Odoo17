@@ -76,7 +76,7 @@ Resources:
   OdooInstance:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: ami-0aa7d40eeae50c9a # Amazon Linux 2 AMI
+      ImageId: ami-07caf09b362be10b8 # Amazon Linux 2023 AMI 2023.4.20240429.0 x86_64 HVM kernel-6.1
       InstanceType: !Ref InstanceType
       IamInstanceProfile: !Ref OdooInstanceProfile
       KeyName: !Ref KeyPairName
@@ -87,7 +87,7 @@ Resources:
         Fn::Base64:
           !Sub |
             #!/bin/bash
-            ${FileFromBucket}
+            https://github.com/medenhan/Odoo17.git
 
   # RDS Instance
   OdooDatabase:
