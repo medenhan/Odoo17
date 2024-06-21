@@ -39,6 +39,7 @@ This guide covers the initial setup of an EC2 instance, Odoo 17 installation, ba
 2. Navigate to EC2 Dashboard
 3. Click "Launch Instance"
 4. Choose "Ubuntu Server 22.04 LTS" as the Amazon Machine Image (AMI)
+5. Choose an instance type with at least 2 vCPUs and 4GB of RAM (e.g., t3.medium or your chosen instance type).
 5. Select t3.medium (or your chosen instance type)
 6. Configure Instance Details as needed
 
@@ -55,36 +56,92 @@ This guide covers the initial setup of an EC2 instance, Odoo 17 installation, ba
 
 ## 4. Odoo 17 Installation
 
-### 4.1 User Data Script
+### 4.1 User Data 
+
  <br />
-    <a href="https://raw.githubusercontent.com/medenhan/Odoo17/main/user-data.sh"><strong>Click here to view the user-data.sh bash script</strong></a>
+    <a href="https://raw.githubusercontent.com/medenhan/Odoo17/main/user-data.sh"><strong>You can access the user-data.sh bash script by clicking here! </strong></a>
     <br />
+In the "Advanced details" section, paste the entire script into the "User data" text area.
+
+#### Note that Before launching, make sure to replace "admin_master_password" and "odoo_db_password" in the script with secure passwords of your choice.
+
 #### 4.1.1 Script Overview
 The user data script automates the installation and configuration of Odoo 17 and its dependencies. It sets up the necessary environment, installs required packages, configures the database, and sets up Nginx as a reverse proxy.
 
 #### 4.1.2 Detailed Script Explanation
     #!/bin/bash
-This is called a shebang. It tells the system this is a bash script.
+1- This is called a shebang. It tells the system this is a bash script.
 
-    #!/bin/bash
+    sudo apt update && sudo apt upgrade -y
+    sudo apt install -y git python3-pip python3-dev python3-venv python3-wheel \
+    libxslt-dev libzip-dev libldap2-dev libsasl2-dev python3-setuptools \
+    node-less postgresql postgresql-client libpq-dev build-essential wkhtmltopdf
+2- These lines update the system and install necessary packages. Each package has a specific purpose (e.g., git for version control, python3-pip for Python package management).
 
-#!/bin/bash
+    sudo adduser --system --group --home=/opt/odoo --shell=/bin/bash odoo
+3- This creates a system user named 'odoo' to run the Odoo service.
 
-#!/bin/bash
+    sudo git clone --depth 1 --branch 17.0 https://www.github.com/odoo/odoo /opt/odoo/odoo
+4- This clones the Odoo source code from GitHub.
+    sudo -u odoo python3 -m venv /opt/odoo/venv
+5- This creates a Python virtual environment for Odoo.
+    sudo -u odoo /opt/odoo/venv/bin/pip install wheel
+    sudo -u odoo /opt/odoo/venv/bin/pip install -r /opt/odoo/odoo/requirements.txt
+    sudo -u odoo /opt/odoo/venv/bin/pip install psycopg2-binary
+6- These commands install Python packages required by Odoo.
 
-#!/bin/bash
+The rest of the script sets up configuration files, creates necessary directories, sets up the database, and configures the web server (Nginx).
+### 4.2 Access Odoo:
+   - Once the instance is running, find its public IP address in the EC2 console.
+   - Open a web browser and navigate to http://<public-ip-address>.
+   - You should see the Odoo database creation page.
 
-#!/bin/bash
+### 4.3 Create your first Odoo database:
 
-1- Update the system and install dependencies
-2- Update the system and install dependencies
-3- Clone Odoo 17 from the official repository
-4- Create a Python virtual environment for Odoo
-5- Install Python dependencies
+On the Odoo database creation page, fill in the required information:
+   - Master Password: Use the admin_master_password you set in the script.
+   - Database Name: Choose a name for your database.
+   - Email: This will be your admin user email.
+   - Password: Set a password for your admin user.
+   - Phone Number: Optional.
+   - Language: Choose your preferred language.
+   - Country: Select your country.
+Decide whether to load demonstration data (recommended for testing).
+   - Click "Create database".
 
-### 4.2 Post-Installation Configuration
-1. Access the Odoo web interface at http://<your-instance-public-ip>
-2. Create the initial database
-3. Log in and perform initial system configuration
+### 4.4 Logging in
 
-[Continue with the remaining sections...]
+After database creation, you'll be redirected to the login page.
+Use the email and password you just set to log in.
+
+### 4.5 Post-Installation Configuration
+1. Change the default master password in /etc/odoo.conf for additional security.
+2. Consider setting up regular database backups.
+3. For production use, implement HTTPS using Let's Encrypt or AWS Certificate Manager.
+
+## 5. Troubleshooting
+If you encounter any issues:
+
+SSH into your instance:
+    ssh ubuntu@<your-instance-ip>
+
+Check Odoo service status:
+    sudo systemctl status odoo
+
+View Odoo logs:
+    sudo tail -f /var/log/odoo/odoo.log
+
+Check Nginx status and logs:
+    sudo systemctl status nginx
+    sudo tail -f /var/log/nginx/error.log
+
+## 6. Customization
+
+   - To install additional Odoo modules, use the Odoo interface or add them to /opt/odoo/odoo/addons.
+   - To change Odoo configuration, edit /etc/odoo.conf and restart the service:
+    sudo nano /etc/odoo.conf
+    sudo systemctl restart odoo
+
+Remember, this setup is suitable for testing or small production environments. For larger deployments, consider separating the database, implementing load balancing, and adding more robust security measures.
+
+By following these steps, you should have a functioning Odoo 17 installation on your EC2 instance, with most of the common issues preemptively addressed. Always monitor your instance and Odoo logs for any unexpected behavior or performance issues.
