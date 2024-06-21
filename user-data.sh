@@ -1,80 +1,118 @@
 #!/bin/bash
-# Update and upgrade the system packages
-sudo apt-get update
-sudo apt-get upgrade -y
 
-# Install backend dependencies
-sudo apt-get install -y python3-pip
-sudo apt-get install -y python3-cffi python3-dev libxml2-dev libxslt1-dev zlib1g-dev libsasl2-dev libldap2-dev build-essential libssl-dev libffi-dev libmysqlclient-dev libjpeg-dev libpq-dev libjpeg8-dev liblcms2-dev libblas-dev libatlas-base-dev
-sudo apt-get install -y openssh-server fail2ban
+# Update the system and install dependencies
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y git python3-pip python3-dev python3-venv python3-wheel \
+    libxslt-dev libzip-dev libldap2-dev libsasl2-dev python3-setuptools \
+    node-less postgresql postgresql-client libpq-dev build-essential wkhtmltopdf
 
-# Install frontend dependencies
-sudo apt-get install -y npm
-sudo ln -s /usr/bin/nodejs /usr/bin/node
-sudo npm install -g less less-plugin-clean-css
-sudo apt-get install -y node-less
+# Create the Odoo user
+sudo adduser --system --group --home=/opt/odoo --shell=/bin/bash odoo
 
-# Install and configure PostgreSQL
-sudo apt-get install -y postgresql
+# Clone Odoo 17 from the official repository
+sudo git clone --depth 1 --branch 17.0 https://www.github.com/odoo/odoo /opt/odoo/odoo
 
-# Add system user for odoo17
-sudo adduser --system --home=/opt/odoo17 --group odoo17
+# Create a Python virtual environment for Odoo
+sudo -u odoo python3 -m venv /opt/odoo/venv
 
-# Install git and Odoo17
-sudo apt-get install -y git
-sudo su - odoo17 -s /bin/bash
-git clone https://www.github.com/odoo/odoo --depth 1 --branch 17.0 --single-branch .
-exit
+# Install Python dependencies
+sudo -u odoo /opt/odoo/venv/bin/pip install wheel  # Install wheel first
+sudo -u odoo /opt/odoo/venv/bin/pip install -r /opt/odoo/odoo/requirements.txt
+sudo -u odoo /opt/odoo/venv/bin/pip install psycopg2-binary  # Install binary version to avoid compilation issues
 
-# Download Odoo dependencies and packages
-sudo pip3 install -r /opt/odoo17/requirements.txt
-wget http://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.0g-2ubuntu4_amd64.deb
-sudo dpkg -i libssl1.1_1.1.0g-2ubuntu4_amd64.deb
-sudo wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.5/wkhtmltox_0.12.5-1.bionic_amd64.deb
-sudo dpkg -i wkhtmltox_0.12.5-1.bionic_amd64.deb
-sudo apt install -f -y
+# Create directories for Odoo data and logs
+sudo mkdir -p /var/lib/odoo /var/log/odoo
+sudo chown odoo:odoo /var/lib/odoo /var/log/odoo
 
-# Retrieve database credentials from Secrets Manager
-SECRET_NAME="odoo17-db-credentials"
-SECRET_STRING=$(aws secretsmanager get-secret-value --secret-id "$SECRET_NAME" --query 'SecretString' --output text)
-DB_USERNAME=$(echo "$SECRET_STRING" | jq -r '.username')
-DB_PASSWORD=$(echo "$SECRET_STRING" | jq -r '.password')
-RDS_ENDPOINT=$(echo "$SECRET_STRING" | jq -r '.host')
+# Create PostgreSQL user for Odoo
+sudo -u postgres createuser -s odoo
 
-# Create Odoo conf file
-sudo cp /opt/odoo17/debian/odoo.conf /etc/odoo17.conf
-sudo sed -i "s/admin_passwd =.*/admin_passwd = admin/" /etc/odoo17.conf
-sudo sed -i "s/db_host =.*/db_host = $RDS_ENDPOINT/" /etc/odoo17.conf
-sudo sed -i "s/db_user =.*/db_user = $DB_USERNAME/" /etc/odoo17.conf
-sudo sed -i "s/db_password =.*/db_password = $DB_PASSWORD/" /etc/odoo17.conf
+# Set a password for the PostgreSQL odoo user (change 'odoo_db_password' to your desired password)
+sudo -u postgres psql -c "ALTER USER odoo WITH PASSWORD 'odoo_db_password';"
 
-# Set ownership and permissions for Odoo conf file
-sudo chown odoo17: /etc/odoo17.conf
-sudo chmod 640 /etc/odoo17.conf
+# Create Odoo configuration file
+sudo tee /etc/odoo.conf > /dev/null <<EOF
+[options]
+admin_passwd = admin_master_password
+db_host = False
+db_port = False
+db_user = odoo
+db_password = odoo_db_password
+addons_path = /opt/odoo/odoo/addons
+logfile = /var/log/odoo/odoo.log
+EOF
 
-# Create Odoo log directory
-sudo mkdir /var/log/odoo
-sudo chown odoo17:root /var/log/odoo
+# Set proper permissions for the configuration file
+sudo chown odoo:odoo /etc/odoo.conf
+sudo chmod 640 /etc/odoo.conf
 
-# Create Odoo Service file
-sudo bash -c 'cat <<EOT > /etc/systemd/system/odoo17.service
+# Create systemd service file for Odoo
+sudo tee /etc/systemd/system/odoo.service > /dev/null <<EOF
 [Unit]
-Description=Odoo17
-Documentation=http://www.odoo.com
+Description=Odoo
+After=network.target postgresql.service
 
 [Service]
 Type=simple
-User=odoo17
-ExecStart=/opt/odoo17/odoo-bin -c /etc/odoo17.conf
+SyslogIdentifier=odoo
+PermissionsStartOnly=true
+User=odoo
+Group=odoo
+ExecStart=/opt/odoo/venv/bin/python3 /opt/odoo/odoo/odoo-bin -c /etc/odoo.conf
+StandardOutput=journal+console
 
 [Install]
-WantedBy=default.target
-EOT'
+WantedBy=multi-user.target
+EOF
 
-# Set permissions and ownership for Odoo Service file
-sudo chmod 755 /etc/systemd/system/odoo17.service
-sudo chown root: /etc/systemd/system/odoo17.service
-
-# Start Odoo17 Service
+# Reload systemd, enable and start Odoo service
 sudo systemctl daemon-reload
-sudo systemctl start odoo17.service
+sudo systemctl enable odoo
+sudo systemctl start odoo
+
+# Install and configure Nginx as a reverse proxy
+sudo apt install -y nginx
+sudo tee /etc/nginx/sites-available/odoo > /dev/null <<EOF
+upstream odoo {
+    server 127.0.0.1:8069;
+}
+
+server {
+    listen 80;
+    server_name _;
+
+    proxy_read_timeout 720s;
+    proxy_connect_timeout 720s;
+    proxy_send_timeout 720s;
+
+    proxy_buffers 16 64k;
+    proxy_buffer_size 128k;
+
+    client_max_body_size 100m;
+
+    location / {
+        proxy_pass http://odoo;
+        proxy_next_upstream error timeout invalid_header http_500 http_502 http_503;
+        proxy_redirect off;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    location ~* /web/static/ {
+        proxy_cache_valid 200 90m;
+        proxy_buffering on;
+        expires 864000;
+        proxy_pass http://odoo;
+    }
+}
+EOF
+
+# Enable the Nginx configuration and restart Nginx
+sudo ln -s /etc/nginx/sites-available/odoo /etc/nginx/sites-enabled/odoo
+sudo rm /etc/nginx/sites-enabled/default
+sudo systemctl restart nginx
+
+# Print the public IP address for accessing Odoo
+echo "Odoo installation complete. You can access it at http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)"
