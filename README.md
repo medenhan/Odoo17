@@ -1,5 +1,5 @@
 # Automating Odoo 17 Deployment on AWS EC2 Using Userdata
-        # step-by-step instructions and Guides
+### step-by-step instructions and Guides
 
 ## 1. Project Overview
 
