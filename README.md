@@ -56,13 +56,16 @@ This guide covers the initial setup of an EC2 instance, Odoo 17 installation, ba
 ## 4. Odoo 17 Installation
 
 ### 4.1 User Data Script
-     <a href="https://raw.githubusercontent.com/medenhan/Odoo17/main/user-data.sh"><strong>Click here to view the user-data.sh script</strong></a>
-   
+    <br />
+    <a href="https://raw.githubusercontent.com/medenhan/Odoo17/main/user-data.sh"><strong>Click here to view the user-data.sh bash script</strong></a>
+    <br />
 #### 4.1.1 Script Overview
 The user data script automates the installation and configuration of Odoo 17 and its dependencies. It sets up the necessary environment, installs required packages, configures the database, and sets up Nginx as a reverse proxy.
 
 #### 4.1.2 Detailed Script Explanation
 #!/bin/bash
+
+    
     ls
 
 1- Update the system and install dependencies
