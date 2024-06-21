@@ -125,15 +125,19 @@ Use the email and password you just set to log in.
 If you encounter any issues:
 
 SSH into your instance:
+
     ssh ubuntu@<your-instance-ip>
 
 Check Odoo service status:
+
     sudo systemctl status odoo
 
 View Odoo logs:
+
     sudo tail -f /var/log/odoo/odoo.log
 
 Check Nginx status and logs:
+
     sudo systemctl status nginx
     sudo tail -f /var/log/nginx/error.log
 
