@@ -57,13 +57,12 @@ This guide covers the initial setup of an EC2 instance, Odoo 17 installation, ba
 ## 4. Odoo 17 Installation
 
 ### 4.1 User Data 
-
- <br />
-    <a href="https://raw.githubusercontent.com/medenhan/Odoo17/main/user-data.sh"><strong>You can access the user-data.sh bash script by clicking here! </strong></a>
-    <br />
 In the "Advanced details" section, paste the entire script into the "User data" text area.
+ <br />
+    <a href="https://raw.githubusercontent.com/medenhan/Odoo17/main/user-data.sh"><strong>You can access the user-data.sh bash script by clicking here! </strong></a>    <br />
 
-#### Note that Before launching, make sure to replace "admin_master_password" and "odoo_db_password" in the script with secure passwords of your choice.
+#### Note 
+ Before launching, make sure to replace "admin_master_password" and "odoo_db_password" in the script with secure passwords of your choice.
 
 #### 4.1.1 Script Overview
 The user data script automates the installation and configuration of Odoo 17 and its dependencies. It sets up the necessary environment, installs required packages, configures the database, and sets up Nginx as a reverse proxy.
@@ -83,11 +82,14 @@ The user data script automates the installation and configuration of Odoo 17 and
 
     sudo git clone --depth 1 --branch 17.0 https://www.github.com/odoo/odoo /opt/odoo/odoo
 4- This clones the Odoo source code from GitHub.
+
     sudo -u odoo python3 -m venv /opt/odoo/venv
 5- This creates a Python virtual environment for Odoo.
+
     sudo -u odoo /opt/odoo/venv/bin/pip install wheel
     sudo -u odoo /opt/odoo/venv/bin/pip install -r /opt/odoo/odoo/requirements.txt
     sudo -u odoo /opt/odoo/venv/bin/pip install psycopg2-binary
+
 6- These commands install Python packages required by Odoo.
 
 The rest of the script sets up configuration files, creates necessary directories, sets up the database, and configures the web server (Nginx).
