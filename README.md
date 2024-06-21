@@ -93,13 +93,13 @@ The user data script automates the installation and configuration of Odoo 17 and
 6- These commands install Python packages required by Odoo.
 
 The rest of the script sets up configuration files, creates necessary directories, sets up the database, and configures the web server (Nginx).
+
 ### 4.2 Access Odoo:
    - Once the instance is running, find its public IP address in the EC2 console.
-   - Open a web browser and navigate to http://<public-ip-address>.
+   - Open a web browser and navigate to http://public-ip-address.
    - You should see the Odoo database creation page.
 
 ### 4.3 Create your first Odoo database:
-
 On the Odoo database creation page, fill in the required information:
    - Master Password: Use the admin_master_password you set in the script.
    - Database Name: Choose a name for your database.
@@ -112,7 +112,6 @@ Decide whether to load demonstration data (recommended for testing).
    - Click "Create database".
 
 ### 4.4 Logging in
-
 After database creation, you'll be redirected to the login page.
 Use the email and password you just set to log in.
 
@@ -122,6 +121,7 @@ Use the email and password you just set to log in.
 3. For production use, implement HTTPS using Let's Encrypt or AWS Certificate Manager.
 
 ## 5. Troubleshooting
+
 If you encounter any issues:
 
 SSH into your instance:
